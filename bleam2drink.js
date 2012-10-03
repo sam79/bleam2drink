@@ -30,19 +30,41 @@ app.get('/', function(req, res) {
     res.send('Hello');
 });
 
+decrNbDrinks = function(day, drinkInit, ubCode, res) {
+    db.setnx(day+':'+ubCode, drinkInit);
+    db.decr(day+':'+ubCode, function(err, nbDrinks) {
+	if (err) return err;
+    	res.send(res.render('drink', {drink: nbDrinks<0?'STOP':nbDrinks+1}));
+    });
+}
 
 app.get('/drink/day1/:ubcode', function(req, res) {
-    db.setnx(req.params.ubcode, 6);
-    db.decr(req.params.ubcode, function(err, nbDrinks) {
-	if (err) return err;
-    	res.send(res.render('drink', {drink: nbDrinks<=0?'STOP':nbDrinks}));
-    });
+    decrNbDrinks("day1", 6, req.params.ubcode, res);
 });
 
-app.put('/reset', function(req, res) {
-    db.flushdb(function (err, didSucceed) { 
+app.get('/drink/day2/:ubcode', function(req, res) {
+    decrNbDrinks("day2", 10, req.params.ubcode, res);
+});
+
+
+resetByKey = function(key) {
+    db.keys(key+':*', function(err, arrayOfKeys) {
+	    arrayOfKeys.forEach(function(key) {
+		    db.del(key, function(err, numRemoved) {
+			    console.log("Removed " + key);
+			});
+		});
+	});
+}
+
+app.post('/reset/day1', function(req, res) {
+	resetByKey("day1");
     	res.send(200, "Reset OK");
-    });
+});
+
+app.post('/reset/day2', function(req, res) {
+	resetByKey("day2");
+        res.send(200, "Reset OK");
 });
 
 app.listen(port, host);
